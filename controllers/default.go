@@ -16,8 +16,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
-	//	"math/rand"
-	//	"time"
+	"io/ioutil"
+	"path/filepath"
+	"strings"
 )
 
 const (
@@ -46,36 +47,48 @@ type ScrollTempResult struct {
 
 }
 
-//type Team struct {
-//	Person
-//	number int
-//}
-
-//27个参赛人员+8个志愿者
 func init() {
-	allPersonList = []Person{Person{1, "张三"}, Person{2, "李..."}, Person{3, "王..."}, Person{4, "赵..."}, Person{5, "钱.."}, Person{6, "徐.."}, Person{7, "相.."}, Person{8, "毛..."}, Person{9, "杜..."}, Person{10, "a"}, Person{11, "b"}, Person{12, "c"}, Person{13, "d"}, Person{14, "e"}, Person{15, "f"}, Person{16, "g"}, Person{17, "h"}, Person{18, "i"}, Person{19, "g"}, Person{20, "k"}, Person{21, "l"}, Person{22, "m"}, Person{23, "n"}, Person{24, "o"}, Person{25, "p"}, Person{26, "q"}, Person{27, "r"}, Person{28, "s"}, Person{29, "t"}, Person{30, "u"}, Person{31, "v"}, Person{32, "w"}, Person{33, "x"}, Person{34, "y"}, Person{35, "z"}}
+	//	allPersonList = []Person{Person{1, "张三"}, Person{2, "李..."}, Person{3, "王..."}, Person{4, "赵..."}, Person{5, "钱.."}, Person{6, "徐.."}, Person{7, "相.."}, Person{8, "毛..."}, Person{9, "杜..."}, Person{10, "a"}, Person{11, "b"}, Person{12, "c"}, Person{13, "d"}, Person{14, "e"}, Person{15, "f"}, Person{16, "g"}, Person{17, "h"}, Person{18, "i"}, Person{19, "g"}, Person{20, "k"}, Person{21, "l"}, Person{22, "m"}, Person{23, "n"}, Person{24, "o"}, Person{25, "p"}, Person{26, "q"}, Person{27, "r"}, Person{28, "s"}, Person{29, "t"}, Person{30, "u"}, Person{31, "v"}, Person{32, "w"}, Person{33, "x"}, Person{34, "y"}, Person{35, "z"}}
+	allPersonList = ReadFile()
 	luckPersonList = []Person{}
 }
 
-//放入获奖列表
-//func Push(p Person) []Person {
-//	//	i := len(LuckPersonList)
-//	luckPersonList = append(luckPersonList, p)
-//	//		fmt.Errorf(" parameter p is nil ....")
-//	return luckPersonList
-//}
+//读取文件
+//格式为：人名
+//func ReadFile(path string) []Person {
+func ReadFile() []Person {
+	filePath, err := filepath.Abs("./conf/test.txt")
+	if err != nil {
+		fmt.Println("read abs path error")
+		return []Person{}
+	}
+	b, e := ioutil.ReadFile(filePath)
+	if e != nil {
+		fmt.Println("read file error")
+		return []Person{}
+	}
+	var fileContentString string = string(b)
+	personArray := strings.SplitN(fileContentString, "\n", -1)
+	var personList []Person = []Person{}
+	for i := 0; i < len(personArray); i++ {
+		var p Person
+		row := strings.SplitN(personArray[i], "	", 2)
+		p.Name = row[0]
+		personList = append(personList, p)
+	}
+	return personList
+
+}
 
 func (this *MainController) Push() {
 	var p Person
 	var sTemp ScrollTempResult
 	err := json.Unmarshal(this.Ctx.Input.RequestBody, &p)
-	fmt.Println(p)
 	luckPersonList = append(luckPersonList, p)
 	if err != nil {
 		this.Data["json"] = -1
 	} else {
 		sTemp.TQueuePersonList = GetQueuePersonList()
-		//fmt.Println(len(sTemp.TQueuePersonList))
 		sTemp.LPersonList = luckPersonList
 		this.Data["json"] = sTemp
 	}
@@ -113,7 +126,7 @@ func GetQueuePersonList() []Person {
 		for i := 0; i < len(allPersonList); i++ {
 			flag := false
 			for j := 0; j < len(luckPersonList); j++ {
-				if luckPersonList[j].SerialNumber == allPersonList[i].SerialNumber {
+				if strings.EqualFold(luckPersonList[j].Name, allPersonList[i].Name) {
 					flag = false
 					break
 				} else {
